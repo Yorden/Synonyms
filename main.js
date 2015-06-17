@@ -159,9 +159,8 @@ app.controller("AppCtrl", ['$scope', '$http', '$interval', '$firebase', '$fireba
 			trackerRemove(synTracker[wordIndex]);
 		}
 	}
-	//used to check of the timer has reached 0
+	//this is called when the timer reaches 0
 	var outOfTime = function() {
-
 		$scope.status = "Out of time. Revealing answers.";
 		listIndex++;
 		inactionCounter = 0;
@@ -181,15 +180,17 @@ app.controller("AppCtrl", ['$scope', '$http', '$interval', '$firebase', '$fireba
 
 		$scope.showSubmit = true;
 	}
-
+	//sets initial timer values
 	var timerStart = function() {
-
+		//the initial time is set to 45 seconds
 		$scope.seconds = 45;
 		active = true;
 
 		if (intervalPromise == null) {intervalPromise = $interval(timerTick, 1000);}
 	}
 
+	//stops the timer
+	//is only called once
 	var timerStop = function() {
 
 		$interval.cancel(intervalPromise);
@@ -197,6 +198,7 @@ app.controller("AppCtrl", ['$scope', '$http', '$interval', '$firebase', '$fireba
 		active = false;
 	}
 
+	//this makes the timer tick by one second every second
 	var timerTick = function() {
 
 		if(active) {
