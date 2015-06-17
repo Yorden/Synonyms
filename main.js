@@ -32,7 +32,7 @@ app.controller("AppCtrl", ['$scope', '$http', '$interval', '$firebase', '$fireba
 		intro.start();
     });
 
-	var inactionCounter = 0;
+	var inactionCounter = 0;//this is is incremented every second in the game, if it equal to 1, then inactionTrigger() is called.  It is reset to 0 in inactionTrigger().
 
 	$scope.points = 0;//player points value
 	$scope.seconds = 0;//this is the initial value for the timer.  This is reset later.
@@ -43,8 +43,9 @@ app.controller("AppCtrl", ['$scope', '$http', '$interval', '$firebase', '$fireba
 	var active = false;
 
 	$scope.wordlist = [];//this is an array of word objects that will be populated when fetchData() is called.
-	var listIndex = 0;
-	var synTracker = [];
+	var listIndex = 0;//this is the index of which root word the game is currently using
+	var synTracker = [];//this is an array that holds the index values of the synonyms as integers
+
 	//http recieves the wordlist json file and sets the respose to $scope.wordlist
 	$http.get("wordlist.json").success(function(response) {$scope.wordlist = response.data;});
 
@@ -68,8 +69,9 @@ app.controller("AppCtrl", ['$scope', '$http', '$interval', '$firebase', '$fireba
 			//synTracker is used later on to track what synonyms have been used
 			synTracker[i] = i;
 			//creates an object and places it inside $scope.words at each index,
-			//word:is the synonym of listIndex index root word at index i
-			//dummy: these are the blanks saved earlier based on the length of the synonym
+			//word:is the synonym of root word at listIndex at index i
+			//dummy: these are the blanks saved earlier based on the length of the synonym.  this is saved as a string.  This is what is being shown in the template
+			//toSwap: this is used to track what letter has been changed from a 'dash' to the letter as a hint.  This is done in inactionTrigger()
 			$scope.words[i] = {word: $scope.wordlist[listIndex].synonyms[i].syn, dummy:blanks, toSwap:0, strike:false, points:""};
 		}
 
@@ -120,7 +122,7 @@ app.controller("AppCtrl", ['$scope', '$http', '$interval', '$firebase', '$fireba
 		$scope.input = "";
 	};
 
-		//Helper functions
+	//Helper functions
 
 	//Custom string character replace function
 	var replaceAt = function(str, index, chr) {
@@ -146,14 +148,14 @@ app.controller("AppCtrl", ['$scope', '$http', '$interval', '$firebase', '$fireba
 	//if the player spends too much time inactive, not guessing values, this triggers
 	var inactionTrigger = function() {
 
-		inactionCounter = 0;
-
-		var wordIndex = Math.round(Math.random() * (synTracker.length - 1));
-		var item = $scope.words[synTracker[wordIndex]];
-		item.dummy = replaceAt(item.dummy, item.toSwap, item.word.charAt(item.toSwap));
-		item.toSwap++;
+		inactionCounter = 0;//resets the inactionCounter
+		var wordIndex = Math.round(Math.random() * (synTracker.length - 1));//this line chooses a random number within the index of the synonymTracker
+		var item = $scope.words[synTracker[wordIndex]];//this then recives the word from the words array
+		item.dummy = replaceAt(item.dummy, item.toSwap, item.word.charAt(item.toSwap));//swaps the letter at the item's toSwap value from the dash to the letter at the same index in the dummy
+		item.toSwap++;//increases the toSwap value
 		console.log(item.toSwap);
 
+		//if the word has been fully revealed, remove it from the word tracker
 		if(item.toSwap == item.word.length - 1) {
 
 			trackerRemove(synTracker[wordIndex]);
@@ -161,16 +163,20 @@ app.controller("AppCtrl", ['$scope', '$http', '$interval', '$firebase', '$fireba
 	}
 	//this is called when the timer reaches 0
 	var outOfTime = function() {
-		$scope.status = "Out of time. Revealing answers.";
-		listIndex++;
-		inactionCounter = 0;
-
+		$scope.status = "Out of time. Revealing answers.";//updates the games status
+		listIndex++;//increases the listIndex.  This gets the next word in the wordlist.json file
+		inactionCounter = 0;//resets the inactionCounter
+		//for loop loops through all the synonyms
 		for (var i = $scope.words.length - 1; i >= 0; i--) {
-
+			//takes the dummy value of the synonym and sets it equal to that word
+			//then takes the toSwap value and sets it equal to the length of the word
+			//this will make the word appear fully without any dashes
 			$scope.words[i].dummy = $scope.words[i].word;
 			$scope.words[i].toSwap = $scope.words[i].word.length - 1;
-		}
 
+		}
+		//this checks to see if there are any root words left in the game to play with
+		//if there are none, run this logic to end the game
 		if(listIndex == $scope.wordlist.length) {
 
 			$scope.myWord = "Game Over"
@@ -184,8 +190,9 @@ app.controller("AppCtrl", ['$scope', '$http', '$interval', '$firebase', '$fireba
 	var timerStart = function() {
 		//the initial time is set to 45 seconds
 		$scope.seconds = 45;
+		//sets the game to active
 		active = true;
-
+		//if the intervalPromise is equal null reset the interval promise
 		if (intervalPromise == null) {intervalPromise = $interval(timerTick, 1000);}
 	}
 
@@ -193,18 +200,21 @@ app.controller("AppCtrl", ['$scope', '$http', '$interval', '$firebase', '$fireba
 	//is only called once
 	var timerStop = function() {
 
-		$interval.cancel(intervalPromise);
-		intervalPromise = null;
-		active = false;
+		$interval.cancel(intervalPromise);//cancels the current intervalPromise to stop calling timerTick
+		intervalPromise = null;  //sets the intervalPromise to null, if this is set to null, it will restart the interval in the if statement in timerStart
+		active = false;		//stops the game by setting actice to false
+
 	}
 
 	//this makes the timer tick by one second every second
 	var timerTick = function() {
-
+		//the only way anything will happen is if the game is set to active
 		if(active) {
+			//decement seconds by 1
+			//increment inactionCounter by 1
 			$scope.seconds--;
 			inactionCounter++;
-
+			//if the game runs out of time, stop the timer(timerStop()) and call outOfTime()
 			if($scope.seconds === 0) {
 	        	timerStop();
 	        	outOfTime();
@@ -214,6 +224,8 @@ app.controller("AppCtrl", ['$scope', '$http', '$interval', '$firebase', '$fireba
 			}
 		}
 	}
+	//this uses angular wrapper $interval to call timerTick every 1000 miliseconds (1 second)
+	//note: the $interval wrapper function returns an angular promise object
 	intervalPromise = $interval(timerTick, 1000);
 
 
