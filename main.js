@@ -190,7 +190,7 @@ app.controller("AppCtrl", ['$scope', '$http', '$interval', '$firebase', '$fireba
 	var timerStart = function() {
 		//the initial time is set to 45 seconds
 		$scope.seconds = 45;
-		//sets the game to active
+		//sets the game to active, game does not run if active = false. see timerTick() for more
 		active = true;
 		//if the intervalPromise is equal null reset the interval promise
 		if (intervalPromise == null) {intervalPromise = $interval(timerTick, 1000);}
